@@ -12,7 +12,7 @@ const GAME_HEIGHT = ROAD_LANES * LANE_HEIGHT;
 const PLAYER_START_LANE = 2;
 const PLAYER_SPEED = 4;
 const OBSTACLE_SPEEDS = {
-  zepto: 6,
+  zepto: 0,
   auto: 4,
   cow: 3,
 };
@@ -126,13 +126,13 @@ function Level1({ onComplete, onGameOver }: { onComplete: () => void, onGameOver
     if (gameState !== 'playing') return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowUp') {
-        let nextLane = playerLane - 1;
-        if (nextLane === outOfServiceLane) nextLane--;
-        if (nextLane >= 0) setPlayerLane(nextLane);
+        const nextLane = playerLane - 1;
+        // Prevent moving into out of service lane
+        if (nextLane >= 0 && nextLane !== outOfServiceLane) setPlayerLane(nextLane);
       } else if (e.key === 'ArrowDown') {
-        let nextLane = playerLane + 1;
-        if (nextLane === outOfServiceLane) nextLane++;
-        if (nextLane < ROAD_LANES) setPlayerLane(nextLane);
+        const nextLane = playerLane + 1;
+        // Prevent moving into out of service lane
+        if (nextLane < ROAD_LANES && nextLane !== outOfServiceLane) setPlayerLane(nextLane);
       }
       setShowInstructions(false);
     };
@@ -484,7 +484,7 @@ function Level2({ onComplete, onGameOver }: { onComplete: () => void; onGameOver
   const [playerX, setPlayerX] = useState(30);
   const [obstacles, setObstacles] = useState<Obstacle[]>([]);
   const [gameState, setGameState] = useState<'playing' | 'gameover' | 'levelcomplete'>('playing');
-  const [timer, setTimer] = useState(15); // seconds
+  const [timer, setTimer] = useState(10); // seconds
   const [trainLeaving, setTrainLeaving] = useState(false);
   const [doorBlink, setDoorBlink] = useState(false);
   const gameRef = useRef(null);
@@ -562,6 +562,7 @@ function Level2({ onComplete, onGameOver }: { onComplete: () => void; onGameOver
           { type: 'crowd', icon: '👥' },
           { type: 'teastall', icon: '🍵' },
           { type: 'watchman', icon: '🧑‍✈️' },
+          { type: 'police', icon: '👮' },
         ];
         const { type, icon } = types[Math.floor(Math.random() * types.length)];
         // Spawn at random x position above the game area
@@ -600,8 +601,26 @@ function Level2({ onComplete, onGameOver }: { onComplete: () => void; onGameOver
           playerBottom > obstacleTop &&
           playerTop < obstacleBottom
         ) {
-          setGameState('gameover');
-          onGameOver();
+          // Collision detected
+          if (obs.type === 'crowd') {
+            // User gets out only if hitting crowd
+            setGameState('gameover');
+            onGameOver();
+          } else if (obs.type === 'teastall') {
+            // If user hits coffee (tea stall) he should walk faster for 2 seconds
+            // Increase player speed temporarily
+            setPlayerX(prev => prev + 60); // Boost player forward by 60 pixels
+            // Remove the hit tea stall obstacle
+            setObstacles(prev => prev.filter(o => o !== obs));
+          } else if (obs.type === 'watchman') {
+            // Collision with watchman has no effect
+            // We can add specific logic for watchman if needed later
+          } else if (obs.type === 'police') {
+            // If user gets encounter with police he should get out
+            setGameState('gameover');
+            onGameOver();
+          }
+          // No action for other obstacles like watchman based on current requirements
         }
       });
 
@@ -620,6 +639,17 @@ function Level2({ onComplete, onGameOver }: { onComplete: () => void; onGameOver
       clearTimeout(trainTimeout);
     };
   }, [playerX, playerLane, obstacles, gameState, onComplete, onGameOver]); // Include playerX in dependencies
+
+  // Reset Level 2 game
+  const handleRestart = () => {
+    setPlayerLane(PLAYER_START_LANE);
+    setPlayerX(30);
+    setObstacles([]);
+    setGameState('playing');
+    setTimer(10);
+    setTrainLeaving(false);
+    setDoorBlink(false);
+  };
 
   // Metro platform background
   return (
@@ -760,7 +790,8 @@ function Level2({ onComplete, onGameOver }: { onComplete: () => void; onGameOver
           fontWeight: 'bold',
           zIndex: 20,
         }}>
-          {trainLeaving ? 'Train Left! Missed it!' : 'Game Over!'}<br />
+          {gameState === 'gameover' && (trainLeaving || timer === 0) ? 'Train Left! Missed it! Please wait for the next train.' : 'Game Over!'}<br />
+          <button onClick={handleRestart} style={{ marginTop: 24, fontSize: 20, padding: '8px 24px', borderRadius: 8, background: '#a259f7', color: '#fff', border: 'none', cursor: 'pointer' }}>Restart</button>
         </div>
       )}
       {gameState === 'levelcomplete' && (
