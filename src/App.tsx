@@ -609,8 +609,8 @@ function Level2({ onComplete, onGameOver }: { onComplete: () => void; onGameOver
             // We can add specific logic for watchman if needed later
           } else if (obs.type === 'police') {
             // If user gets encounter with police he should get out
-            setGameState('gameover');
-            onGameOver();
+          setGameState('gameover');
+          onGameOver();
           }
           // No action for other obstacles like watchman based on current requirements
         }
@@ -786,7 +786,7 @@ function Level2({ onComplete, onGameOver }: { onComplete: () => void; onGameOver
         {/* Shadow */}
         <div style={{ position: 'absolute', left: 10, top: PLAYER_HEIGHT - 10, width: PLAYER_WIDTH - 20, height: 18, background: 'rgba(0,0,0,0.18)', borderRadius: '50%', zIndex: 1 }} />
         <div style={{ position: 'relative', zIndex: 2 }}>{SimpleWomanSVG}</div>
-      </div>
+          </div>
       {/* Game Over / Level Complete */}
       {gameState === 'gameover' && (
         <div style={{
