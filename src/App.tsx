@@ -13,7 +13,7 @@ const GAME_HEIGHT = ROAD_LANES * LANE_HEIGHT;
 const PLAYER_START_LANE = 2;
 const PLAYER_SPEED = 4;
 const OBSTACLE_SPEEDS = {
-  zepto: 0,
+  zepto: 7,
   auto: 4,
   cow: 3,
 };
@@ -919,7 +919,6 @@ function Level3({ onComplete, onGameOver }: { onComplete: () => void; onGameOver
     setCskSpawnCount(0); // Reset spawn count on restart
   };
 
-  // Play win sound when game is complete
   const audioRef = useRef<HTMLAudioElement>(null);
   useEffect(() => {
     if (gameState === 'levelcomplete' && audioRef.current) {
@@ -928,7 +927,7 @@ function Level3({ onComplete, onGameOver }: { onComplete: () => void; onGameOver
   }, [gameState]);
 
   return (
-    <div style={{ width: GAME_WIDTH_LEVEL3, height: GAME_HEIGHT_LEVEL3, margin: '40px auto', position: 'relative', background: '#a4c2a5', borderRadius: '50%', overflow: 'hidden', boxShadow: '0 4px 24px #0005' }} ref={gameRef}>
+    <div style={{ width: GAME_WIDTH_LEVEL3, height: GAME_HEIGHT_LEVEL3, margin: '60px auto 40px auto', position: 'relative', background: '#a4c2a5', borderRadius: '50%', overflow: 'hidden', boxShadow: '0 4px 24px #0005' }} ref={gameRef}>
       {/* Chinnaswamy Pitch (simple green background for now) */}
       <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: GAME_WIDTH_LEVEL3 * 0.15, height: GAME_HEIGHT_LEVEL3 * 0.9, background: 'linear-gradient(180deg, #8b4513 0%, #a0522d 100%)', zIndex: 0, borderRadius: '10px' }} />
       {/* Boundary Lines (simple white lines) */}
@@ -1018,8 +1017,57 @@ function Level3({ onComplete, onGameOver }: { onComplete: () => void; onGameOver
           Level 3 Complete! Thank you for playing!<br />
         </div>
       )}
+      {/* Firecracker effect on win */}
+      {gameState === 'levelcomplete' && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          zIndex: 20,
+          pointerEvents: 'none', // Allow clicks to pass through
+          overflow: 'hidden',
+        }}>
+          {[...Array(50)].map((_, i) => (
+            <div
+              key={i}
+              style={{
+                position: 'absolute',
+                width: '10px',
+                height: '10px',
+                backgroundColor: `#${Math.floor(Math.random()*16777215).toString(16)}`, // Random color
+                borderRadius: '50%',
+                top: `${Math.random() * 100}%`,
+                left: `${Math.random() * 100}%`,
+                animation: `firecracker ${1 + Math.random() * 1}s ease-out forwards`,
+                animationDelay: `${Math.random() * 1}s`,
+              }}
+            />
+          ))}
+        </div>
+      )}
       {/* Audio element for win sound */}
       <audio ref={audioRef} src="./rcb_win.mp3" preload="auto" />
+
+      {/* Level Nameboard (LEVEL 3 ESCN) */}
+      <div style={{
+        width: '100vw',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        zIndex: 200,
+        background: 'linear-gradient(90deg, #e01a4f 60%, #ff4500 100%)',
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: 22,
+        letterSpacing: 1,
+        boxShadow: '0 2px 8px #0003',
+        height: 44,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>LEVEL 3 ESCN</div>
     </div>
   );
 }
