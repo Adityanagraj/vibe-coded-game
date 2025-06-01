@@ -484,7 +484,6 @@ function Level2({ onComplete, onGameOver }: { onComplete: () => void; onGameOver
   const [playerX, setPlayerX] = useState(30);
   const [obstacles, setObstacles] = useState<Obstacle[]>([]);
   const [gameState, setGameState] = useState<'playing' | 'gameover' | 'levelcomplete'>('playing');
-  const [timer, setTimer] = useState(10); // seconds
   const [trainLeaving, setTrainLeaving] = useState(false);
   const [doorBlink, setDoorBlink] = useState(false);
   const gameRef = useRef(null);
@@ -521,21 +520,7 @@ function Level2({ onComplete, onGameOver }: { onComplete: () => void; onGameOver
   useEffect(() => {
     if (gameState !== 'playing') return;
     let animationId: number;
-    let timerInterval: number;
     let trainTimeout: number;
-
-    // Timer
-    timerInterval = setInterval(() => {
-      setTimer(t => {
-        if (t <= 1) {
-          setGameState('gameover');
-          onGameOver();
-          clearInterval(timerInterval);
-          return 0;
-        }
-        return t - 1;
-      });
-    }, 1000);
 
     // Random train leaves early (keep for challenge)
     if (Math.random() < 0.1) {
@@ -635,7 +620,6 @@ function Level2({ onComplete, onGameOver }: { onComplete: () => void; onGameOver
     animationId = requestAnimationFrame(loop);
     return () => {
       cancelAnimationFrame(animationId);
-      clearInterval(timerInterval);
       clearTimeout(trainTimeout);
     };
   }, [playerX, playerLane, obstacles, gameState, onComplete, onGameOver]); // Include playerX in dependencies
@@ -646,7 +630,6 @@ function Level2({ onComplete, onGameOver }: { onComplete: () => void; onGameOver
     setPlayerX(30);
     setObstacles([]);
     setGameState('playing');
-    setTimer(10);
     setTrainLeaving(false);
     setDoorBlink(false);
   };
@@ -678,8 +661,6 @@ function Level2({ onComplete, onGameOver }: { onComplete: () => void; onGameOver
       }}>
         Level 2: Namma Metro Rush
       </div>
-      {/* Timer */}
-      <div style={{ position: 'fixed', top: 24, left: '50%', transform: 'translateX(-50%)', fontSize: 28, color: '#fff', fontWeight: 'bold', background: '#8e24aa', borderRadius: 12, padding: '6px 24px', boxShadow: '0 2px 8px #0002', zIndex: 100, border: '2px solid #fff' }}>⏰ {timer}s</div>
       {/* Metro Wall & Pillars */}
       <div style={{ position: 'absolute', top: 60, left: 0, width: '100%', height: 60, background: 'linear-gradient(90deg, #bdbdbd 80%, #e3e3e3 100%)', zIndex: 1, display: 'flex', alignItems: 'center' }}>
         {[...Array(6)].map((_, i) => (
@@ -790,7 +771,7 @@ function Level2({ onComplete, onGameOver }: { onComplete: () => void; onGameOver
           fontWeight: 'bold',
           zIndex: 20,
         }}>
-          {gameState === 'gameover' && (trainLeaving || timer === 0) ? 'Train Left! Missed it! Please wait for the next train.' : 'Game Over!'}<br />
+          {trainLeaving ? 'Train Left! Missed it! Please wait for the next train.' : 'Game Over!'}<br />
           <button onClick={handleRestart} style={{ marginTop: 24, fontSize: 20, padding: '8px 24px', borderRadius: 8, background: '#a259f7', color: '#fff', border: 'none', cursor: 'pointer' }}>Restart</button>
         </div>
       )}
