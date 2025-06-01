@@ -275,7 +275,13 @@ function Level1({ onComplete, onGameOver }: { onComplete: () => void, onGameOver
           <div style={{ fontSize: 38, fontWeight: 'bold', marginBottom: 24, fontFamily: 'Noto Sans Kannada, sans-serif' }}>
             ಬೆಂಗಳೂರು ಕ್ರಾನಿಕಲ್ಸ್‌ಗೆ ಸ್ವಾಗತ
           </div>
-          <button onClick={handleStartGame} style={{ fontSize: 24, padding: '12px 40px', borderRadius: 12, background: '#a259f7', color: '#fff', border: 'none', fontWeight: 'bold', cursor: 'pointer', marginTop: 16 }}>Start Game</button>
+          <div style={{ fontSize: 20, marginBottom: 24, textAlign: 'center' }}>
+            <b>Level 1:</b> Traffic Dodge<br />
+            <b>Objective:</b> Reach the end of the road.<br />
+            <b>Controls:</b> Use <b>&uarr;</b> and <b>&darr;</b> to dodge.<br />
+            Avoid the Out of Service lane.<br />
+          </div>
+          <button onClick={() => setGameState('playing')} style={{ fontSize: 24, padding: '12px 40px', borderRadius: 12, background: '#a259f7', color: '#fff', border: 'none', fontWeight: 'bold', cursor: 'pointer', marginTop: 16 }}>Start Game</button>
         </div>
       )}
       {/* Level Nameboard */}
@@ -480,11 +486,11 @@ function Level1({ onComplete, onGameOver }: { onComplete: () => void, onGameOver
 
 // Level 2 Component (skeleton)
 function Level2({ onComplete, onGameOver }: { onComplete: () => void; onGameOver: () => void }) {
-  // State for player position, obstacles, etc.
+  const [showInstructions, setShowInstructions] = useState(true);
   const [playerLane, setPlayerLane] = useState(PLAYER_START_LANE);
   const [playerX, setPlayerX] = useState(30);
   const [obstacles, setObstacles] = useState<Obstacle[]>([]);
-  const [gameState, setGameState] = useState<'playing' | 'gameover' | 'levelcomplete'>('playing');
+  const [gameState, setGameState] = useState<'welcome' | 'playing' | 'gameover' | 'levelcomplete'>('welcome');
   const [trainLeaving, setTrainLeaving] = useState(false);
   const [doorBlink, setDoorBlink] = useState(false);
   const gameRef = useRef(null);
@@ -493,19 +499,19 @@ function Level2({ onComplete, onGameOver }: { onComplete: () => void; onGameOver
   // Progress
   const progress = Math.min(1, (playerX + PLAYER_WIDTH) / (LEVEL2_DISTANCE - 40));
 
-  // Handle keyboard input (lane-based, like Level 1)
+  // Handle keyboard input
   useEffect(() => {
     if (gameState !== 'playing') return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Player can move left, right, up, down within the game area
-      if (e.key === 'ArrowUp') setPlayerLane(lane => Math.max(0, lane - 1));
-      if (e.key === 'ArrowDown') setPlayerLane(lane => Math.min(ROAD_LANES - 1, lane + 1));
-      if (e.key === 'ArrowRight') setPlayerX(x => Math.min(GAME_WIDTH - PLAYER_WIDTH, x + 20)); // Allow right movement towards train
-      if (e.key === 'ArrowLeft') setPlayerX(x => Math.max(0, x - 20)); // Allow left movement
+      // Player moves left and right on the platform
+      if (e.key === 'ArrowLeft') setPlayerX(prev => Math.max(0, prev - 10));
+      if (e.key === 'ArrowRight') setPlayerX(prev => Math.min(GAME_WIDTH - PLAYER_WIDTH, prev + 10));
+      // Vertical movement is not needed in Level 2 platform
+      setShowInstructions(false); // Hide instructions on first move
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameState, playerLane, playerX]); // Add playerX to dependencies
+  }, [gameState, playerX]);
 
   // Train door blinking animation
   useEffect(() => {
@@ -638,6 +644,33 @@ function Level2({ onComplete, onGameOver }: { onComplete: () => void; onGameOver
   // Metro platform background
   return (
     <div style={{ width: GAME_WIDTH, height: GAME_HEIGHT + 80, margin: '40px auto', position: 'relative', background: 'linear-gradient(180deg, #e3f2fd 60%, #bdbdbd 100%)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 24px #0005', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+      {/* Welcome Screen */}
+      {gameState === 'welcome' && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          background: '#222e',
+          color: 'white',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 20,
+        }}>
+          <div style={{ fontSize: 30, fontWeight: 'bold', marginBottom: 16 }}>
+            Level 2: Namma Metro Rush
+          </div>
+          <div style={{ fontSize: 20, marginBottom: 24, textAlign: 'center' }}>
+            <b>Objective:</b> Reach the Metro Train.<br />
+            <b>Controls:</b> Use <b>&larr;</b> and <b>&rarr;</b> to move left and right.<br />
+            <b>Obstacles:</b> Avoid 👥 (Crowd) and 👮 (Police).<br />Touching 🍵 (Tea Stall) gives you a boost.<br />
+          </div>
+          <button onClick={() => setGameState('playing')} style={{ fontSize: 24, padding: '12px 40px', borderRadius: 12, background: '#a259f7', color: '#fff', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>Start</button>
+        </div>
+      )}
       {/* Progress Bar */}
       <div style={{ position: 'absolute', top: 16, left: 40, width: GAME_WIDTH - 160, height: 18, background: '#eee', borderRadius: 10, boxShadow: '0 1px 4px #0002', zIndex: 10 }}>
         <div style={{ width: `${progress * 100}%`, height: '100%', background: 'linear-gradient(90deg, #8e24aa, #00bfae)', borderRadius: 10, transition: 'width 0.2s' }} />
@@ -802,6 +835,7 @@ function Level2({ onComplete, onGameOver }: { onComplete: () => void; onGameOver
 
 // Level 3 Component (skeleton)
 function Level3({ onComplete, onGameOver }: { onComplete: () => void; onGameOver: () => void }) {
+  const [showInstructions, setShowInstructions] = useState(true);
   const GAME_WIDTH_LEVEL3 = 1100;
   const GAME_HEIGHT_LEVEL3 = 600; // Adjust height for pitch
   const PLAYER_WIDTH_LEVEL3 = 80;
@@ -814,7 +848,7 @@ function Level3({ onComplete, onGameOver }: { onComplete: () => void; onGameOver
 
   const [playerX, setPlayerX] = useState(PLAYER_START_X_LEVEL3);
   const [playerY, setPlayerY] = useState(PLAYER_START_Y_LEVEL3);
-  const [gameState, setGameState] = useState<'playing' | 'gameover' | 'levelcomplete'>('playing');
+  const [gameState, setGameState] = useState<'welcome' | 'playing' | 'gameover' | 'levelcomplete'>('welcome');
   const [obstacles, setObstacles] = useState<Obstacle[]>([]); // Add state for obstacles
   const [cskSpawnCount, setCskSpawnCount] = useState(0); // Track spawned CSK obstacles
   const gameRef = useRef(null);
@@ -829,6 +863,7 @@ function Level3({ onComplete, onGameOver }: { onComplete: () => void; onGameOver
       } else if (e.key === 'ArrowRight') {
         setPlayerX(prev => Math.min(GAME_WIDTH_LEVEL3 - PLAYER_WIDTH_LEVEL3, prev + PLAYER_HORIZONTAL_SPEED));
       }
+      setShowInstructions(false);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -928,6 +963,33 @@ function Level3({ onComplete, onGameOver }: { onComplete: () => void; onGameOver
 
   return (
     <div style={{ width: GAME_WIDTH_LEVEL3, height: GAME_HEIGHT_LEVEL3, margin: '60px auto 40px auto', position: 'relative', background: '#a4c2a5', borderRadius: '50%', overflow: 'hidden', boxShadow: '0 4px 24px #0005' }} ref={gameRef}>
+      {/* Welcome Screen */}
+      {gameState === 'welcome' && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          background: '#222e',
+          color: 'white',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 20,
+        }}>
+          <div style={{ fontSize: 30, fontWeight: 'bold', marginBottom: 16 }}>
+            LEVEL 3: RCB Finale
+          </div>
+          <div style={{ fontSize: 20, marginBottom: 24, textAlign: 'center' }}>
+            <b>Objective:</b> Reach the Trophy.<br />
+            <b>Controls:</b> Use <b>&larr;</b> and <b>&rarr;</b> to move left and right.<br />
+            <b>Obstacles:</b> Avoid CSK Logo To win.<br />
+          </div>
+          <button onClick={() => setGameState('playing')} style={{ fontSize: 24, padding: '12px 40px', borderRadius: 12, background: '#e01a4f', color: '#fff', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>Start</button>
+        </div>
+      )}
       {/* Chinnaswamy Pitch (simple green background for now) */}
       <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: GAME_WIDTH_LEVEL3 * 0.15, height: GAME_HEIGHT_LEVEL3 * 0.9, background: 'linear-gradient(180deg, #8b4513 0%, #a0522d 100%)', zIndex: 0, borderRadius: '10px' }} />
       {/* Boundary Lines (simple white lines) */}
