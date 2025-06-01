@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import metroImg from './download.jpg';
+import cskLogo from './csk_logo.png'; // Assuming the image is named csk_logo.png and is in src
 
 const ROAD_LANES = 5;
 const LANE_HEIGHT = 120;
-const PLAYER_WIDTH = 90;
+const PLAYER_WIDTH = 120;
 const PLAYER_HEIGHT = 100;
-const OBSTACLE_WIDTH = 90;
-const OBSTACLE_HEIGHT = 90;
+const OBSTACLE_WIDTH = 40;
+const OBSTACLE_HEIGHT = 40;
 const GAME_WIDTH = 1100;
 const GAME_HEIGHT = ROAD_LANES * LANE_HEIGHT;
 const PLAYER_START_LANE = 2;
@@ -622,7 +623,7 @@ function Level2({ onComplete, onGameOver }: { onComplete: () => void; onGameOver
       cancelAnimationFrame(animationId);
       clearTimeout(trainTimeout);
     };
-  }, [playerX, playerLane, obstacles, gameState, onComplete, onGameOver]); // Include playerX in dependencies
+  }, [playerX, playerLane, obstacles, gameState, onComplete, onGameOver]);
 
   // Reset Level 2 game
   const handleRestart = () => {
@@ -799,11 +800,235 @@ function Level2({ onComplete, onGameOver }: { onComplete: () => void; onGameOver
   );
 }
 
-// Main App
+// Level 3 Component (skeleton)
+function Level3({ onComplete, onGameOver }: { onComplete: () => void; onGameOver: () => void }) {
+  const GAME_WIDTH_LEVEL3 = 1100;
+  const GAME_HEIGHT_LEVEL3 = 600; // Adjust height for pitch
+  const PLAYER_WIDTH_LEVEL3 = 80;
+  const PLAYER_HEIGHT_LEVEL3 = 100;
+  const PLAYER_START_X_LEVEL3 = GAME_WIDTH_LEVEL3 / 2 - PLAYER_WIDTH_LEVEL3 / 2; // Start in the middle horizontally
+  const PLAYER_START_Y_LEVEL3 = GAME_HEIGHT_LEVEL3 - PLAYER_HEIGHT_LEVEL3 - 20; // Start near the bottom
+  const PLAYER_SPEED_LEVEL3 = 3; // Reduced player speed
+  const PLAYER_HORIZONTAL_SPEED = 8; // Speed for left/right movement
+  const TROPHY_REACH_THRESHOLD = 50; // Distance from trophy to win
+
+  const [playerX, setPlayerX] = useState(PLAYER_START_X_LEVEL3);
+  const [playerY, setPlayerY] = useState(PLAYER_START_Y_LEVEL3);
+  const [gameState, setGameState] = useState<'playing' | 'gameover' | 'levelcomplete'>('playing');
+  const [obstacles, setObstacles] = useState<Obstacle[]>([]); // Add state for obstacles
+  const [cskSpawnCount, setCskSpawnCount] = useState(0); // Track spawned CSK obstacles
+  const gameRef = useRef(null);
+  const lastObstacleTimeRef = useRef(Date.now()); // To control obstacle spawning rate
+
+  // Handle keyboard input (left/right movement)
+  useEffect(() => {
+    if (gameState !== 'playing') return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        setPlayerX(prev => Math.max(0, prev - PLAYER_HORIZONTAL_SPEED));
+      } else if (e.key === 'ArrowRight') {
+        setPlayerX(prev => Math.min(GAME_WIDTH_LEVEL3 - PLAYER_WIDTH_LEVEL3, prev + PLAYER_HORIZONTAL_SPEED));
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [gameState, playerX]);
+
+  // Game loop
+  useEffect(() => {
+    if (gameState !== 'playing') return;
+    let animationId: number;
+
+    const loop = () => {
+      // Move player forward automatically (decreasing Y)
+      setPlayerY(prev => prev - PLAYER_SPEED_LEVEL3);
+
+      // Obstacle spawning and movement
+      const now = Date.now();
+      if (now - lastObstacleTimeRef.current > 2000 && cskSpawnCount < 2) { // Spawn new obstacle every 2 seconds, max 2
+        setObstacles(prev => {
+          const newObstacle = {
+            type: 'csk',
+            icon: cskLogo, // Use the imported image
+            // Constrain spawning to the pitch width (adjust these values based on your pitch positioning and size)
+            x: GAME_WIDTH_LEVEL3 / 2 - (GAME_WIDTH_LEVEL3 * 0.15) / 2 + Math.random() * (GAME_WIDTH_LEVEL3 * 0.15 - OBSTACLE_WIDTH), // Random horizontal position within pitch bounds
+            y: 0, // Start at the top of the game area
+            speed: 3 + Math.random() * 1, // Slightly reduced speed for fewer obstacles
+            lane: 0, // Lane not used in this level but required by type
+          };
+          setCskSpawnCount(prev => prev + 1); // Increment spawn count
+          return [...prev, newObstacle];
+        });
+        lastObstacleTimeRef.current = now;
+      }
+
+      // Move obstacles downwards
+      setObstacles(prev =>
+        prev
+          .map(obs => ({ ...obs, y: obs.y + obs.speed }))
+          .filter(obs => obs.y < GAME_HEIGHT_LEVEL3 + OBSTACLE_HEIGHT) // Remove obstacles that are off-screen
+      );
+
+      // Collision detection
+      obstacles.forEach(obs => {
+        // Assuming simple rectangular collision for now
+        const playerRight = playerX + PLAYER_WIDTH_LEVEL3;
+        const playerLeft = playerX;
+        const playerBottom = playerY + PLAYER_HEIGHT_LEVEL3;
+        const playerTop = playerY;
+
+        const obstacleRight = obs.x + OBSTACLE_WIDTH; // Assuming OBSTACLE_WIDTH is defined
+        const obstacleLeft = obs.x;
+        const obstacleBottom = obs.y + OBSTACLE_HEIGHT; // Assuming OBSTACLE_HEIGHT is defined
+        const obstacleTop = obs.y;
+
+        if (
+          playerRight > obstacleLeft &&
+          playerLeft < obstacleRight &&
+          playerBottom > obstacleTop &&
+          playerTop < obstacleBottom
+        ) {
+          // Collision detected
+          if (obs.type === 'csk') {
+            // If player hits CSK, game over
+            setGameState('gameover');
+            onGameOver();
+          }
+          // TODO: Handle collision with ESCN flags here later
+        }
+      });
+
+      // Win condition: reach the trophy (playerY is close to the top)
+      if (playerY <= TROPHY_REACH_THRESHOLD) {
+        setGameState('levelcomplete');
+        onComplete();
+      }
+
+      animationId = requestAnimationFrame(loop);
+    };
+    animationId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animationId);
+  }, [playerY, gameState, onComplete, onGameOver]);
+
+  // Reset Level 3 game
+  const handleRestart = () => {
+    setPlayerX(PLAYER_START_X_LEVEL3);
+    setPlayerY(PLAYER_START_Y_LEVEL3);
+    setObstacles([]);
+    setGameState('playing');
+    setCskSpawnCount(0); // Reset spawn count on restart
+  };
+
+  // Play win sound when game is complete
+  const audioRef = useRef<HTMLAudioElement>(null);
+  useEffect(() => {
+    if (gameState === 'levelcomplete' && audioRef.current) {
+      audioRef.current.play();
+    }
+  }, [gameState]);
+
+  return (
+    <div style={{ width: GAME_WIDTH_LEVEL3, height: GAME_HEIGHT_LEVEL3, margin: '40px auto', position: 'relative', background: '#a4c2a5', borderRadius: '50%', overflow: 'hidden', boxShadow: '0 4px 24px #0005' }} ref={gameRef}>
+      {/* Chinnaswamy Pitch (simple green background for now) */}
+      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: GAME_WIDTH_LEVEL3 * 0.15, height: GAME_HEIGHT_LEVEL3 * 0.9, background: 'linear-gradient(180deg, #8b4513 0%, #a0522d 100%)', zIndex: 0, borderRadius: '10px' }} />
+      {/* Boundary Lines (simple white lines) */}
+      <div style={{ position: 'absolute', top: 10, left: 10, width: GAME_WIDTH_LEVEL3 - 20, height: GAME_HEIGHT_LEVEL3 - 20, border: '4px dashed #fff', zIndex: 1, borderRadius: '50%' }} />
+      {/* Trophy Placeholder at the top */}
+      <div style={{ position: 'absolute', top: 20, left: GAME_WIDTH_LEVEL3 / 2 - 30, width: 60, height: 80, background: 'red', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, zIndex: 2 }}>🏆</div>
+
+      {/* Player (placeholder) */}
+      {gameState === 'playing' && (
+        <div
+          style={{
+            position: 'absolute',
+            left: playerX,
+            top: playerY,
+            width: PLAYER_WIDTH_LEVEL3,
+            height: PLAYER_HEIGHT_LEVEL3,
+            zIndex: 3,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {SimpleManSVG}
+        </div>
+      )}
+
+      {/* Obstacles (CSK players) */}
+      {gameState === 'playing' && obstacles.map((obs, idx) => (
+        <div
+          key={idx}
+          style={{
+            position: 'absolute',
+            left: obs.x,
+            top: obs.y,
+            width: OBSTACLE_WIDTH, // Assuming OBSTACLE_WIDTH is defined or use a new constant
+            height: OBSTACLE_HEIGHT, // Assuming OBSTACLE_HEIGHT is defined or use a new constant
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 40, // Adjust size as needed
+            zIndex: 4, // Above player
+          }}
+        >
+          {obs.type === 'csk' ? <img src={obs.icon} alt="CSK Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <span>{obs.icon}</span>} {/* Render image or emoji based on type */}
+        </div>
+      ))}
+
+      {/* Game Over / Level Complete */}
+      {gameState === 'gameover' && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          background: '#0008',
+          color: 'white',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 32,
+          fontWeight: 'bold',
+          zIndex: 10,
+        }}>
+          Game Over!<br />
+          <button onClick={handleRestart} style={{ marginTop: 24, fontSize: 20, padding: '8px 24px', borderRadius: 8, background: '#e01a4f', color: '#fff', border: 'none', cursor: 'pointer' }}>Restart</button>
+        </div>
+      )}
+      {gameState === 'levelcomplete' && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          background: '#0008',
+          color: 'white',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 32,
+          fontWeight: 'bold',
+          zIndex: 10,
+        }}>
+          Level 3 Complete! Thank you for playing!<br />
+        </div>
+      )}
+      {/* Audio element for win sound */}
+      <audio ref={audioRef} src="./rcb_win.mp3" preload="auto" />
+    </div>
+  );
+}
+
 function App() {
   const [level, setLevel] = useState(1);
   const [showTransition, setShowTransition] = useState(false);
   const [nextLevel, setNextLevel] = useState(2);
+  const [isGameOver, setIsGameOver] = useState(false);
 
   if (showTransition) {
     setTimeout(() => {
@@ -818,17 +1043,23 @@ function App() {
   }
 
   if (level === 1) {
-    return <Level1 onComplete={() => { setShowTransition(true); setNextLevel(2); }} onGameOver={() => {}} />;
+    return <Level1 onComplete={() => { setShowTransition(true); setNextLevel(2); }} onGameOver={() => { setIsGameOver(true); }} />;
   }
 
   if (level === 2) {
-    return <Level2 onComplete={() => { setShowTransition(true); setNextLevel(3); }} onGameOver={() => {}} />;
+    return <Level2 onComplete={() => { setShowTransition(true); setNextLevel(3); }} onGameOver={() => { setIsGameOver(true); }} />;
   }
 
   if (level === 3) {
+    return <Level3 onComplete={() => { console.log('Game Complete!'); }} onGameOver={() => { setIsGameOver(true); }} />;
+  }
+
+  // Handle game over state from levels
+  if (isGameOver) {
     return (
-      <div style={{ width: GAME_WIDTH, height: GAME_HEIGHT + 80, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, fontWeight: 'bold', color: '#e01a4f', background: '#fff', borderRadius: 16 }}>
-        Level 3: RCB Finale Coming Soon!
+      <div style={{ width: GAME_WIDTH, height: GAME_HEIGHT + 80, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, fontWeight: 'bold', color: 'red', background: '#fff', borderRadius: 16 }}>
+        Game Over! Thanks for playing.<br />
+        <button onClick={() => setLevel(1)} style={{ marginTop: 20, fontSize: 24, padding: '10px 30px', borderRadius: 10, background: '#e01a4f', color: '#fff', border: 'none', cursor: 'pointer' }}>Play Again</button>
       </div>
     );
   }
